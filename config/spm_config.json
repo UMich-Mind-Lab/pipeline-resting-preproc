@@ -1,0 +1,57 @@
+{
+  "preproc_spm_realign":
+  {
+    "quality": 0.9,
+    "sep": 4,
+    "fwhm": 5,
+    "rtm": 0,
+    "einterp": 2,
+    "ewrap": [[0, 0, 0]],
+    "which": [[2, 1]],
+    "rinterp": 4,
+    "rwrap": [[0, 0, 0]],
+    "mask": 1,
+    "prefix": "r"
+  },
+  "preproc_spm_slicetime":
+  {
+    "prefix": "t"
+  },
+  "preproc_spm_coregister":
+  {
+    "cost_fun": "nmi",
+    "sep": [[4,2]],
+    "tol": [[0.02,0.02,0.02,0.001,0.001,0.001,0.01,0.01,0.01,0.001,0.001,0.001]],
+    "fwhm": [[7,7]]
+  },
+  "preproc_spm_normalize":
+  {
+    "biasreg": 0.0001,
+    "biasfwhm": 60,
+    "affreg": "mni",
+    "reg": [[0,0.001,0.5,0.05,0.2]],
+    "fwhm": 0,
+    "samp": 3,
+    "bb": [[-90,-126,-72],[90,90,108]],
+    "vox": [[2,2,2]],
+    "interp": 4,
+    "prefix": "w"
+  },
+  "preproc_spm_smooth":
+  {
+    "fwhm": [[8,8,8]],
+    "dtype": 0,
+    "im": 0,
+    "prefix": "s"
+  },
+  "L1_spm_modelspec":
+  {
+    "fmri_t": 16,
+    "fmri_t0": 8,
+    "hrf_derivs": [[0,0]],
+    "volt": 1,
+    "global": "None",
+    "mthresh": 0.3,
+    "cvi": "AR(1)"
+  }
+}
