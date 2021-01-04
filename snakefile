@@ -1,18 +1,36 @@
+import os, subprocess
 
-
-localrules: all, getRawFunc, getRawT1w
+localrules: all, getRawFunc, getRawT1w, gunzipIcaAroma, covAAL90, covAAL116, covDiedrichsen2011, covGordon2016, covPower264, covSchaefer2018, covTian2020Subcortical, symBold, symArt, symRp, symT1w
 configfile: 'config/sm_config.json'
 
 rule all:
     input:
-        expand(config['bids_dir']+'/sub-{sub}/ses-{ses}/func/sub-{sub}_ses-{ses}_task-{task}_acq-{acq}_run-{run}_events.tsv',
-            sub=config['sub'],ses=config['ses'],acq=config['acq'],task=config['task'],run=config['run']),
         expand('data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/art_regression_outliers_swrtrun-{run}.mat',
+             sub=config['sub'],ses=config['ses'],acq=config['acq'],task=config['task'],run=config['run']),
+        expand('data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}_icaaroma/denoised_func_data_nonaggr.nii',
             sub=config['sub'],ses=config['ses'],acq=config['acq'],task=config['task'],run=config['run']),
-        expand('data/output/sub-{sub}/ses-{ses}/sub-{sub}_ses-{ses}_task-rest_acq-{task}.{acq}_run-{run}_bold.nii.gz',
+        expand('data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}/cov/AAL90',
+            sub=config['sub'],ses=config['ses'],acq=config['acq'],task=config['task'],run=config['run']),
+        expand('data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}/cov/AAL116',
+            sub=config['sub'],ses=config['ses'],acq=config['acq'],task=config['task'],run=config['run']),
+        expand('data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}/cov/Diedrichsen2011',
+            sub=config['sub'],ses=config['ses'],acq=config['acq'],task=config['task'],run=config['run']),
+        expand('data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}/cov/Gordon2016',
+            sub=config['sub'],ses=config['ses'],acq=config['acq'],task=config['task'],run=config['run']),
+        expand('data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}/cov/Power264',
+            sub=config['sub'],ses=config['ses'],acq=config['acq'],task=config['task'],run=config['run']),
+        expand('data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}/cov/Schaefer2018',
+            sub=config['sub'],ses=config['ses'],acq=config['acq'],task=config['task'],run=config['run']),
+        expand('data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}/cov/Tian2020',
+            sub=config['sub'],ses=config['ses'],acq=config['acq'],task=config['task'],run=config['run']),
+        expand('../pipeline-resting-L1/data/preprocessed/sub-{sub}/ses-{ses}/sub-{sub}_ses-{ses}_task-{task}_acq-{acq}_run-{run}_bold.nii',
+            sub=config['sub'],ses=config['ses'],acq=config['acq'],task=config['task'],run=config['run']),
+        expand('../pipeline-resting-L1/data/preprocessed/sub-{sub}/ses-{ses}/sub-{sub}_ses-{ses}_space-{task}.{acq}_run-{run}_hT1w.nii',
+            sub=config['sub'],ses=config['ses'],acq=config['acq'],task=config['task'],run=config['run']),
+        expand('../pipeline-resting-L1/data/preprocessed/sub-{sub}/ses-{ses}/sub-{sub}_ses-{ses}_task-{task}_acq-{acq}_run-{run}_art_regression_outliers.mat',
+            sub=config['sub'],ses=config['ses'],acq=config['acq'],task=config['task'],run=config['run']),
+        expand('../pipeline-resting-L1/data/preprocessed/sub-{sub}/ses-{ses}/sub-{sub}_ses-{ses}_task-{task}_acq-{acq}_run-{run}_rp.txt',
             sub=config['sub'],ses=config['ses'],acq=config['acq'],task=config['task'],run=config['run'])
-        #expand('data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/art_regression_outliers_swutrun-{run}.mat',
-        #    acq=config['acq'],task=config['task'],sub=config['sub'],ses=config['ses'],run=config['run']),
 
 # STEP 1 - COPY INPUT FILES
 rule getRawFunc:
@@ -43,6 +61,16 @@ rule hCorr:
 		matlab -nodisplay -r "cd $PWD; addpath $PWD/bin/; addpath {config[spm_dir]};
 		hCorr('{input.t1w}','{output.hT1w}'); exit;"
 		'''.replace('\n','')
+
+rule Unifize:
+    input:
+        'data/anat/sub-{sub}/ses-{ses}/hT1w.nii'
+    output:
+        'data/anat/sub-{sub}/ses-{ses}/uhT1w.nii'
+    shell:
+        '''
+        singularity run -B $PWD:/data ../../lib/fmriproc.sif 3dUnifize -prefix /data/{output} /data/{input}
+        '''
 
 #For spiral only
 #append functional image so 10th volume of ref image is first (and thus used as reference)
@@ -170,38 +198,72 @@ rule cleanRealign2:
 rule spmCoregister:
     input:
         rtFunc = 'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/rtrun-1.nii',
-        hT1w = 'data/anat/sub-{sub}/ses-{ses}/hT1w.nii'
+        uhT1w = 'data/anat/sub-{sub}/ses-{ses}/uhT1w.nii'
     output:
-        chT1w = 'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/chT1w.nii'
+        cuhT1w = 'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/cuhT1w.nii'
     shell:
         '''
         tmpJob=$(mktemp tmp/XXXXXXXX.mat)
-        cp {input.hT1w} {output.chT1w}
-        preTime=$(stat -c %y {output.chT1w})
+        cp {input.uhT1w} {output.cuhT1w}
+        preTime=$(stat -c %y {output.cuhT1w})
         matlab -nodisplay -r "cd $PWD; addpath $PWD/bin; addpath {config[spm_dir]}; \
-        preproc_spm_coregister('refImg', '{input.rtFunc},10', 'srcImg', '{output.chT1w}', \
+        preproc_spm_coregister('refImg', '{input.rtFunc},10', 'srcImg', '{output.cuhT1w}', \
         'outFile', '$tmpJob'); exit"
         singularity run -B $PWD:/data {config[spmSif]} /data/bin/spm_jobman_run.m $tmpJob
-        postTime=$(stat -c %y {output.chT1w})
+        postTime=$(stat -c %y {output.cuhT1w})
         if [[ "$preTime" == "$postTime" ]]; then
-            rm {output.chT1w}
+            rm {output.cuhT1w}
         fi
         rm $tmpJob
         '''
 
-rule spmNormalize:
+rule spmSegment:
     input:
-        rtFunc = 'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/rtrun-{run}.nii',
-        chT1w = 'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/chT1w.nii',
+        cuhT1w = 'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/cuhT1w.nii',
         TPM = 'lib/tpm/SPM_TPM.nii'
     output:
-        wrtFunc = 'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/wrtrun-{run}.nii'
+        defField = 'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/y_cuhT1w.nii',
+        gm = 'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/wc1cuhT1w.nii',
+        wm = 'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/wc2cuhT1w.nii',
+        csf = 'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/wc3cuhT1w.nii'
     shell:
         '''
         tmpJob=$(mktemp tmp/XXXXXXXX.mat)
         matlab -nodisplay -r "cd $PWD; addpath $PWD/bin; addpath {config[spm_dir]}; \
-        preproc_spm_normalize('inFunc', '{input.rtFunc}', 'inStruct', '{input.chT1w}', \
+        preproc_spm_segment('inStruct','{input.cuhT1w}', \
         'TPM', '{input.TPM}', 'outFile', '$tmpJob'); exit"
+        singularity run -B $PWD:/data {config[spmSif]} /data/bin/spm_jobman_run.m $tmpJob
+        rm $tmpJob
+        '''
+
+rule spmNormalizeFunc:
+    input:
+        rtFunc = 'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/rtrun-{run}.nii',
+        defField = 'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/y_cuhT1w.nii'
+    output:
+        wrtFunc = 'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/wrtrun-{run}.nii',
+    shell:
+        '''
+        tmpJob=$(mktemp tmp/XXXXXXXX.mat)
+        matlab -nodisplay -r "cd $PWD; addpath $PWD/bin; addpath {config[spm_dir]}; \
+        preproc_spm_normalize_write('inDef', '{input.defField}', 'inNii', '{input.rtFunc}', \
+        'outFile', '$tmpJob'); exit"
+        singularity run -B $PWD:/data {config[spmSif]} /data/bin/spm_jobman_run.m $tmpJob
+        rm $tmpJob
+        '''
+
+rule spmNormalizeT1w:
+    input:
+        cuhT1w = 'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/cuhT1w.nii',
+        defField = 'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/y_cuhT1w.nii'
+    output:
+        wcuhT1w = 'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/wcuhT1w.nii',
+    shell:
+        '''
+        tmpJob=$(mktemp tmp/XXXXXXXX.mat)
+        matlab -nodisplay -r "cd $PWD; addpath $PWD/bin; addpath {config[spm_dir]}; \
+        preproc_spm_normalize_write('inDef', '{input.defField}', 'inNii', '{input.cuhT1w}', \
+        'outFile', '$tmpJob'); exit"
         singularity run -B $PWD:/data {config[spmSif]} /data/bin/spm_jobman_run.m $tmpJob
         rm $tmpJob
         '''
@@ -248,17 +310,173 @@ rule icaAROMA:
         bidsJson = config['bids_dir']+'/task-{task}_acq-{acq}_bold.json',
         mask = 'lib/masks/MNI152_T1_2mm_mask.nii.gz'
     output:
-        'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}_icaaroma/denoised_func_data_nonaggr.nii'
-    threads: 4
+        temp('data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}_icaaroma/denoised_func_data_nonaggr.nii.gz')
+    threads: 2
     shell:
         '''
         tr=$(cat {input.bidsJson} | jq -r '.RepetitionTime')
-        ../../lib/fmriproc.sif ./bin/preproc_ica_aroma_run.sh                       \
-            -i $PWD/{input.swrtFunc} -o $PWD/$(dirname "{output}") -mc $PWD/{input.rpTxt}    \
-            -tr $tr -den both -m $PWD/{input.mask}
+        singularity run -B $PWD:/data ../../lib/fmriproc.sif /data/bin/preproc_ica_aroma_run.sh                       \
+            -i /data/{input.swrtFunc} -o /data/$(dirname "{output}") -mc /data/{input.rpTxt}    \
+            -tr $tr -den both -m /data/{input.mask} || true
         cd $(dirname {output})
-        gunzip *.nii.gz
         '''
+
+rule unzipIcaAROMA:
+    input:
+        'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}_icaaroma/denoised_func_data_nonaggr.nii.gz'
+    output:
+        'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}_icaaroma/denoised_func_data_nonaggr.nii'
+    shell:
+        'gunzip {input}'
+
+
+### COVERAGE CHECKING
+
+def get_masks(masks):
+    return [ os.path.join(masks,x) for x in os.listdir(masks) if '.nii' in x ]
+
+rule covAAL90:
+    input:
+        nii='data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}_icaaroma/denoised_func_data_nonaggr.nii',
+        masks=get_masks(config['masks']['AAL90'])
+    output:
+        covDir=directory('data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}/cov/AAL90')
+    shell:
+        '''
+        matlab -nodisplay -r "cd $PWD; addpath $PWD/bin/; addpath
+        $PWD/{config[spm_dir]}; batch_check_coverage('{input.nii}',
+        '{input.masks}','{output.covDir}'); exit;"
+        '''.replace('\n','')
+
+rule covAAL116:
+    input:
+        nii='data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}_icaaroma/denoised_func_data_nonaggr.nii',
+        masks=get_masks(config['masks']['AAL116'])
+    output:
+        covDir=directory('data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}/cov/AAL116')
+    shell:
+        '''
+        matlab -nodisplay -r "cd $PWD; addpath $PWD/bin/; addpath
+        $PWD/{config[spm_dir]}; batch_check_coverage('{input.nii}',
+        '{input.masks}','{output.covDir}'); exit;"
+        '''.replace('\n','')
+
+rule covDiedrichsen2011:
+    input:
+        nii='data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}_icaaroma/denoised_func_data_nonaggr.nii',
+        masks=get_masks(config['masks']['Diedrichsen2011'])
+    output:
+        covDir=directory('data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}/cov/Diedrichsen2011')
+    shell:
+        '''
+        matlab -nodisplay -r "cd $PWD; addpath $PWD/bin/; addpath
+        $PWD/{config[spm_dir]}; batch_check_coverage('{input.nii}',
+        '{input.masks}','{output.covDir}'); exit;"
+        '''.replace('\n','')
+
+rule covGordon2016:
+    input:
+        nii='data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}_icaaroma/denoised_func_data_nonaggr.nii',
+        masks=get_masks(config['masks']['Gordon2016'])
+    output:
+        covDir=directory('data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}/cov/Gordon2016')
+    shell:
+        '''
+        matlab -nodisplay -r "cd $PWD; addpath $PWD/bin/; addpath
+        $PWD/{config[spm_dir]}; batch_check_coverage('{input.nii}',
+        '{input.masks}','{output.covDir}'); exit;"
+        '''.replace('\n','')
+
+rule covPower264:
+    input:
+        nii='data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}_icaaroma/denoised_func_data_nonaggr.nii',
+        masks=get_masks(config['masks']['Power264'])
+    output:
+        covDir=directory('data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}/cov/Power264')
+    shell:
+        '''
+        matlab -nodisplay -r "cd $PWD; addpath $PWD/bin/; addpath
+        $PWD/{config[spm_dir]}; batch_check_coverage('{input.nii}',
+        '{input.masks}','{output.covDir}'); exit;"
+        '''.replace('\n','')
+
+rule covSchaefer2018:
+    input:
+        nii='data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}_icaaroma/denoised_func_data_nonaggr.nii',
+        masks=get_masks(config['masks']['Schaefer2018'])
+    output:
+        covDir=directory('data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}/cov/Schaefer2018')
+    shell:
+        '''
+        matlab -nodisplay -r "cd $PWD; addpath $PWD/bin/; addpath
+        $PWD/{config[spm_dir]}; batch_check_coverage('{input.nii}',
+        '{input.masks}','{output.covDir}'); exit;"
+        '''.replace('\n','')
+
+rule covTian2020Subcortical:
+    input:
+        nii='data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}_icaaroma/denoised_func_data_nonaggr.nii',
+        masks=get_masks(config['masks']['Tian2020'])
+    output:
+        covDir=directory('data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}/cov/Tian2020')
+    shell:
+        '''
+        matlab -nodisplay -r "cd $PWD; addpath $PWD/bin/; addpath
+        $PWD/{config[spm_dir]}; batch_check_coverage('{input.nii}',
+        '{input.masks}','{output.covDir}'); exit;"
+        '''.replace('\n','')
+
+### MAKE SYMLINKS
+rule symBold:
+    input:
+        'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/run-{run}_icaaroma/denoised_func_data_nonaggr.nii'
+    output:
+        '../pipeline-resting-L1/data/preprocessed/sub-{sub}/ses-{ses}/sub-{sub}_ses-{ses}_task-{task}_acq-{acq}_run-{run}_bold.nii'
+    priority: 100
+    shell:
+        '''
+        mkdir -p $(dirname {output})
+        linkPath=$(realpath --relative-to=$(dirname {output}) $(dirname {input}))
+        ln -s $linkPath/$(basename {input}) {output}
+        '''
+
+rule symT1w:
+    input:
+        'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/chT1w.nii'
+    output:
+        '../pipeline-resting-L1/data/preprocessed/sub-{sub}/ses-{ses}/sub-{sub}_ses-{ses}_space-{task}.{acq}_run-{run}_hT1w.nii'
+    shell:
+        '''
+        mkdir -p $(dirname {output})
+        linkPath=$(realpath --relative-to=$(dirname {output}) $(dirname {input}))
+        ln -s $linkPath/$(basename {input}) {output}
+        '''
+
+rule symArt:
+    input:
+        'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/art_regression_outliers_swrtrun-{run}.mat'
+    output:
+        '../pipeline-resting-L1/data/preprocessed/sub-{sub}/ses-{ses}/sub-{sub}_ses-{ses}_task-{task}_acq-{acq}_run-{run}_art_regression_outliers.mat'
+    shell:
+        '''
+        mkdir -p $(dirname {output})
+        linkPath=$(realpath --relative-to=$(dirname {output}) $(dirname {input}))
+        ln -s $linkPath/$(basename {input}) {output}
+        '''
+
+
+rule symRp:
+    input:
+        'data/acq-{acq}/preproc/task-{task}/sub-{sub}/ses-{ses}/rp_run-{run}.txt'
+    output:
+        '../pipeline-resting-L1/data/preprocessed/sub-{sub}/ses-{ses}/sub-{sub}_ses-{ses}_task-{task}_acq-{acq}_run-{run}_rp.txt'
+    shell:
+        '''
+        mkdir -p $(dirname {output})
+        linkPath=$(realpath --relative-to=$(dirname {output}) $(dirname {input}))
+        ln -s $linkPath/$(basename {input}) {output}
+        '''
+
 
 '''
 # 80% non-spiked volumes from ART

@@ -1,13 +1,13 @@
 {
   "__default__":
   {
-    "account":"lsa1",
+    "account":"csmonk{wildcards.ses}",
     "partition":"standard",
     "mail-type":"FAIL",
-    "time":"01:00:00",
+    "time":"00:45:00",
     "nodes":1,
     "ntasks-per-node":1,
-    "cpus-per-task":2,
+    "cpus-per-task":1,
     "mem":"8gb",
     "job-name":"{wildcards.sub}.{wildcards.ses}.{rule}",
     "out":"logs/sub-{wildcards.sub}_ses-{wildcards.ses}_{rule}-%j.out",
@@ -15,13 +15,13 @@
   },
   "icaAROMA":
   {
-    "account":"lsa1",
+    "account":"csmonk{wildcards.ses}",
     "partition":"standard",
     "mail-type":"FAIL",
     "time":"01:00:00",
     "nodes":1,
     "ntasks-per-node":1,
-    "cpus-per-task":4,
+    "cpus-per-task":2,
     "mem":"8gb",
     "job-name":"{wildcards.sub}.{wildcards.ses}.{rule}",
     "out":"logs/sub-{wildcards.sub}_ses-{wildcards.ses}_{rule}-%j.out",

@@ -13,12 +13,13 @@ conda activate ../../lib/.conda/snakemake
 
 pwd
 # RUN SNAKEMAKE
+snakemake --version
 snakemake -s snakefile --cluster "sbatch -A {cluster.account} \
   -p {cluster.partition} --mail-type={cluster.mail-type} --time={cluster.time} \
   -N {cluster.nodes} --ntasks-per-node={cluster.ntasks-per-node} \
   --cpus-per-task={cluster.cpus-per-task} --mem={cluster.mem} \
   --job-name={cluster.job-name} -o {cluster.out} -e {cluster.err}" \
-  --cluster-config config/sm_slurm-config.json -k --jobs 50 --latency-wait 90
+  --cluster-config config/sm_slurm-config.json --jobs 25 --latency-wait 45 --rerun-incomplete -k
 
 # I don't understand profiles but maybe I'll figure it out later
 # snakemake -s ./snakefiles/func_processing_test.smk --profile slurm-func \#
