@@ -16,8 +16,8 @@ try
   spmCfg = spmCfg.(mfilename());
 
   mbatch{1}.spm.spatial.preproc.channel.vols = {p.Results.inStruct};
-  mbatch{1}.spm.spatial.preproc.channel.biasreg = 0;
-  mbatch{1}.spm.spatial.preproc.channel.biasfwhm = Inf;
+  mbatch{1}.spm.spatial.preproc.channel.biasreg = 0.001;
+  mbatch{1}.spm.spatial.preproc.channel.biasfwhm = 60;
   mbatch{1}.spm.spatial.preproc.channel.write = [0 0];
   mbatch{1}.spm.spatial.preproc.tissue(1).tpm = {sprintf('%s,1',p.Results.TPM)};
   mbatch{1}.spm.spatial.preproc.tissue(1).ngaus = 1;
